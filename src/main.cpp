@@ -1,98 +1,22 @@
 #include <GL/glew.h>
 #include <GL/glut.h>
 #include <GLFW/glfw3.h>
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <signal.h>
 
-#define ASSERT(x) if (!(x)) raise(SIGTRAP);
-// This macro gives a useful error message when an OpenGL function fails
-#define GLCall(x) GLClearError();\
-    x;\
-    ASSERT(GLLogCall(#x, __FILE__, __LINE__))
+#include "Renderer.h"
+#include "VertexBuffer.h"
+#include "IndexBuffer.h"
+#include "VertexArray.h"  
+#include "Shader.h"
+#include "VertexBufferLayout.h"
+#include "Texture.h"
 
-static void GLClearError(){
-    while (glGetError() != GL_NO_ERROR); // Clear all the errors
-}
+#include "include/glm/glm.hpp"
+#include "include/glm/gtc/matrix_transform.hpp"
 
-static bool GLLogCall(const char* function, const char* file, int line){
-    while (GLenum error = glGetError()){
-        std::cout << "[OpenGL Error] (" << error << "): " << function << " " << file << ":" << line << std::endl;
-        return false;
-    };
-    return true;
-}
-
-struct ShaderProgramSource {
-    std::string VertexSource;
-    std::string FragmentSource;
-};
-
-static ShaderProgramSource parse_shader(const std::string& filepath){
-    std::ifstream stream(filepath);
-
-    enum class ShaderType {
-        NONE = -1, VERTEX = 0, FRAGMENT = 1
-    };
-
-    std::string line;
-    std::stringstream ss[2];
-    ShaderType type = ShaderType::NONE;
-    while (getline(stream, line)){
-        if (line.find("#shader") != std::string::npos){
-            if (line.find("vertex") != std::string::npos){
-                type = ShaderType::VERTEX;
-            } else if (line.find("fragment") != std::string::npos){
-                type = ShaderType::FRAGMENT; 
-            }
-        }else{
-            ss[(int)type] << line << '\n';
-        }
-    }
-
-    return {ss[0].str(), ss[1].str()};
-}
-
-static unsigned int CompileShader(unsigned int type, const std::string& source){
-    unsigned int id = glCreateShader(type); // Create a shader, that returns its ID
-    const char* src = source.c_str(); // Get the pointer of the first character of the code
-    glShaderSource(id, 1, &src, nullptr); // Set the source code of the shader
-    glCompileShader(id); // Compile the shader
-
-    // Error handling
-    int result;
-    glGetShaderiv(id, GL_COMPILE_STATUS, &result); // Get the result of the compilation
-    if (result == GL_FALSE){
-        int length;
-        glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length); // Get the length of the error message
-        char message[length]; // Create a char array with the length of the error message
-        glGetShaderInfoLog(id, length, &length, message); // Get the error message
-        std::cout << "Failed to compile " << (type == GL_VERTEX_SHADER ? "vertex" : "fragment") << " shader!" << std::endl;
-        std::cout << message << std::endl;
-        glDeleteShader(id); // Delete the shader
-        return 0;
-    }
-    return id;
-}
-
-static unsigned int CreateShader(const std::string& vertexShader, const std::string& fragmentShader){
-    /* This string are literally the source code for the shaders. We can have this strings hardcoded, or read them from files*/
-    unsigned int program = glCreateProgram(); // Create a program, that returns its ID
-    unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader); // Create a vertex shader, that returns its ID
-    unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader); // Create a vertex shader, that returns its ID
-
-    glAttachShader(program, vs); // Attach the vertex shader to the program
-    glAttachShader(program, fs); // Attach the fragment shader to the program
-    glLinkProgram(program); // Link the program
-    glValidateProgram(program); // Validate the program
-
-    // Shaders are no longer needed after linking
-    glDeleteShader(vs); // Delete the vertex shader
-    glDeleteShader(fs); // Delete the fragment shader
-
-    return program;
-}
 
 int main(void)
 {   
@@ -101,6 +25,10 @@ int main(void)
     /* Initialize the library */
     if (!glfwInit())
         return -1;
+
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // Set the major version of OpenGL
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3); // Set the minor version of OpenGL
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // Set the profile of OpenGL to core (No backwards compatibility)
 
     /* Create a windowed mode window and its OpenGL context */
     window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
@@ -119,13 +47,13 @@ int main(void)
     if (glewInit() != GLEW_OK) 
         std::cout << "Error!" << std::endl;
 
-    std::cout << glGetString(GL_VERSION) << std::endl;
+    std::cout << "OpenGL Version: " << glGetString(GL_VERSION) << std::endl;
 
     float positions[] = {
-        -0.5f, -0.5f,
-         0.5f, -0.5f,
-         0.5f,  0.5f,
-        -0.5f,  0.5f,
+        -0.5f, -0.5f, 0.0f, 0.0f,
+         0.5f, -0.5f, 1.0f, 0.0f,
+         0.5f,  0.5f, 1.0f, 1.0f,
+        -0.5f,  0.5f, 0.0f, 1.0f
     };
 
     unsigned int indices[] = {
@@ -133,36 +61,36 @@ int main(void)
         2, 3, 0
     };
 
-    // Create a buffer
-    unsigned int buffer;
-    glGenBuffers(1, &buffer); // Instantiate a buffer and store its ID  
-    glBindBuffer(GL_ARRAY_BUFFER, buffer); // Select the buffer
-    glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), positions, GL_STATIC_DRAW); // Fill the buffer with data
+    GLCall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)); // Set the blending function
+    GLCall(glEnable(GL_BLEND)); // Enable blending
 
-    // We only have one attribute (position), so we just need to do this once
-    glEnableVertexAttribArray(0); // Enable the attribute (position)
-    glVertexAttribPointer(
-        0, // Index of the attribute (position) 
-        2, // Number of components per attribute (x, y)
-        GL_FLOAT, // Type of the components
-        GL_FALSE, // Normalize the components (Floats are already normalized, but maybe we want to normalize colors)
-        sizeof(float) * 2, // Stride (The ammount we need to go to get to the next vertex)
-        (const void*)0 // Pointer (Location of the attribute inside the vertex)
-    );
+    VertexArray va; // Instantiate a vertex array
+    VertexBuffer vb(positions, 4 * 4 * sizeof(float)); // Instantiate a buffer with the positions and binds it by default
+    VertexBufferLayout layout; // Instantiate a vertex buffer layout
+    layout.Push<float>(2); // Push the positions to the layout
+    layout.Push<float>(2); // Push the texture positions to the layout
+    va.addBuffer(vb, layout); // Add the buffer to the vertex array
 
-    unsigned int ibo; // Index buffer object
-    glGenBuffers(1, &ibo); // Instantiate a buffer and store its ID  
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo); // Select the buffer
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW); // Fill the buffer with data
+    IndexBuffer ib(indices, 6); // Instantiate an index buffer
 
-    ShaderProgramSource source = parse_shader("res/shaders/basic.shader");
+    glm::mat4 proj = glm::ortho(-1.0f, 1.0f, -0.75f, 0.75f, -1.0f, 1.0f); // Create an orthographic projection matrix by giving it the aspect ratio 4x3 of our image
+    
+    Shader shader("res/shaders/basic.shader");
+    shader.Bind(); // Select the program shader
+    shader.SetUniform4f("u_Color", 0.8f, 0.3, 0.8f, 1.0f); // Set the uniform 4f (four floats)
+    shader.SetUniformMat4f("u_MVP", proj); // Set the uniform matrix 4f (four floats)
 
-    unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
-    GLCall(glUseProgram(shader)); // Use the program
+    Texture texture("res/textures/ChernoLogo.png");
+    texture.Bind(); // Select the texture
+    shader.SetUniform1i("u_Texture", 0); // That's how we select textures in the shader
 
-    int location = glGetUniformLocation(shader, "u_Color"); // Get the location of the uniform
-    ASSERT(location != -1); // Check if the uniform exists
-    glUniform4f(location, 0.2f, 0.3, 0.8f, 1.0f); // Set the uniform 4f (four floats)
+    // Clear OpenGL states
+    va.Unbind(); // Select no vertex array
+    shader.Unbind(); // Select no program
+    vb.Unbind(); // Select no buffer
+    ib.Unbind(); // Select no element buffer
+
+    Renderer renderer; // Instantiate a renderer
 
     float r = 0.0f;
     float increment = 0.05f;
@@ -171,10 +99,12 @@ int main(void)
     while (!glfwWindowShouldClose(window))
     {
         /* Render here */
-        glClear(GL_COLOR_BUFFER_BIT);
+        renderer.Clear(); // Clear the color buffer
 
-        GLCall(glUniform4f(location, r, 0.3, 0.8f, 1.0f));
-        GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr)); // Draw the elements
+        shader.Bind(); // Use the program
+        shader.SetUniform4f("u_Color", r, 0.3, 0.8f, 1.0f); // Set the uniform 4f (four floats)
+
+        renderer.Draw(va, ib, shader); // Draw the vertex array, index buffer and shader
 
         if (r > 1.0f){
             r = 1.0f;
@@ -192,8 +122,8 @@ int main(void)
         glfwPollEvents();
     }
 
-    glDeleteProgram(shader); // Delete the program
-
     glfwTerminate();
     return 0;
 }
+
+

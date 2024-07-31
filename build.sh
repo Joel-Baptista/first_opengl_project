@@ -1,3 +1,3 @@
-cmake -S ./src -B ./build
+cmake -S . -B ./build
 cd build
 make
