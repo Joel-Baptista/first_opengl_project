@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <array>
 
 #include "Renderer.h"
 
@@ -121,6 +122,12 @@ void Shader::SetUniform1f(const std::string& name, float value){
 
 void Shader::SetUniform1i(const std::string& name, int value){
     GLCall(glUniform1i(GetUniformLocation(name), value));
+}
+
+void Shader::SetUniform1iv(const std::string& name, GLint value[]){
+    int size = sizeof(value) / sizeof(value[0]);
+    std::cout << size << std::endl;
+    GLCall(glUniform1iv(GetUniformLocation(name), size, value));
 }
 
 void Shader::SetUniformMat4f(const std::string& name, const glm::mat4& matrix){

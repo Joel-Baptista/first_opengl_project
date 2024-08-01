@@ -8,6 +8,11 @@ Texture::Texture(const std::string& path) : m_RendererID(0), m_FilePath(path), m
     stbi_set_flip_vertically_on_load(1); // Flip the image vertically (Open GL expects the origin to be at the bottom left)
     m_LocalBuffer = stbi_load(path.c_str(), &m_Width, &m_Height, &m_BPP, 4); // Load the image (4 channels RGBA)
 
+    std::cout << "Texture: " << path << std::endl;
+    std::cout << "Width: " << m_Width << std::endl;
+    std::cout << "Height: " << m_Height << std::endl;
+    std::cout << "BPP: " << m_BPP << std::endl;
+
     GLCall(glGenTextures(1, &m_RendererID)); // Instantiate a texture and store its ID
     GLCall(glBindTexture(GL_TEXTURE_2D, m_RendererID)); // Select the texture
 
