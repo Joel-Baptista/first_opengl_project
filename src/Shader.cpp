@@ -124,8 +124,7 @@ void Shader::SetUniform1i(const std::string& name, int value){
     GLCall(glUniform1i(GetUniformLocation(name), value));
 }
 
-void Shader::SetUniform1iv(const std::string& name, GLint value[]){
-    int size = sizeof(value) / sizeof(value[0]);
+void Shader::SetUniform1iv(const std::string& name, unsigned int size,GLint value[]){
     std::cout << size << std::endl;
     GLCall(glUniform1iv(GetUniformLocation(name), size, value));
 }

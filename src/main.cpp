@@ -20,6 +20,7 @@
 #include "tests/TestBatchRendering2D.h"
 #include "tests/TestBatchColor.h"
 #include "tests/TestBatchTexture.h"
+#include "tests/TestBatchDynamic.h"
 
 #include "include/glm/glm.hpp"
 #include "include/glm/gtc/matrix_transform.hpp"
@@ -78,6 +79,7 @@ int main(void)
     testMenu->RegisterTest<test::TestBatchRendering2D>("Batch Rendering 2D");
     testMenu->RegisterTest<test::TestBatchColor>("Batch Color");
     testMenu->RegisterTest<test::TestBatchTexture>("Batch Texture");
+    testMenu->RegisterTest<test::TestBatchDynamic>("Batch Dynamic");
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))

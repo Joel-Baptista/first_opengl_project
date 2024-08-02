@@ -21,6 +21,7 @@ add_executable(game
     src/tests/TestBatchRendering2D.cpp
     src/tests/TestBatchColor.cpp
     src/tests/TestBatchTexture.cpp
+    src/tests/TestBatchDynamic.cpp
     src/tests/Test.cpp
     src/include/stb_image/stb_image.cpp
     src/include/imgui/imgui_impl_glfw_gl3.cpp

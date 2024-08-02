@@ -14,10 +14,10 @@ namespace test {
         m_Proj(glm::ortho(0.0f, 960.0f, 0.0f, 540.0f, -1.0f, 1.0f)), m_View(glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0)))
     {
         float vertices[] = {
-            -50.0f, -50.0f, 0.396f, 0.263f, 0.129f, 1.0f, 0.0f, 0.0f, 0.0f,
-             50.0f, -50.0f, 0.396f, 0.263f, 0.129f, 1.0f, 1.0f, 0.0f, 0.0f, 
-             50.0f,  50.0f, 0.396f, 0.263f, 0.129f, 1.0f, 1.0f, 1.0f, 0.0f, 
-            -50.0f,  50.0f, 0.396f, 0.263f, 0.129f, 1.0f, 0.0f, 1.0f, 0.0f, 
+            -50.0f, -50.0f, 0.396f, 0.263f, 0.129f, 1.0f, 0.0f, 0.0f, 1.0f,
+             50.0f, -50.0f, 0.396f, 0.263f, 0.129f, 1.0f, 1.0f, 0.0f, 1.0f, 
+             50.0f,  50.0f, 0.396f, 0.263f, 0.129f, 1.0f, 1.0f, 1.0f, 1.0f, 
+            -50.0f,  50.0f, 0.396f, 0.263f, 0.129f, 1.0f, 0.0f, 1.0f, 1.0f, 
 
             150.0f, -50.0f, 0.71f, 0.40, 0.11f, 1.0f, 0.0f, 0.0f, 2.0f,
             250.0f, -50.0f, 0.71f, 0.40, 0.11f, 1.0f, 1.0f, 0.0f, 2.0f,
@@ -61,7 +61,8 @@ namespace test {
             sampler[i] = i;
         }
 
-        m_Shader->SetUniform1iv("u_Textures", sampler); // That's how we select textures in the shader
+        size_t size = sizeof(sampler) / sizeof(sampler[0]);
+        m_Shader->SetUniform1iv("u_Textures", size, sampler); // That's how we select textures in the shader
     }
 
     TestBatchTexture::~TestBatchTexture()
@@ -86,14 +87,6 @@ namespace test {
             m_Shader->SetUniformMat4f("u_MVP", mvp);
             renderer.Draw(*m_VAO, *m_IndexBuffer, *m_Shader);
         }
-
-        // {
-        //     glm::mat4 model = glm::translate(glm::mat4(1.0f), m_TranslationB);
-        //     glm::mat4 mvp = m_Proj * m_View * model;
-        //     m_Shader->Bind();
-        //     m_Shader->SetUniformMat4f("u_MVP", mvp);
-        //     renderer.Draw(*m_VAO, *m_IndexBuffer, *m_Shader);
-        // }
 
     }
 
